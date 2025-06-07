@@ -1,0 +1,109 @@
+﻿@page "/countries"
+@attribute [StreamRendering]
+@using HospitalManagementSystem.Data
+@using HospitalManagementSystem.Models
+@using Microsoft.AspNetCore.Identity;
+@using Microsoft.AspNetCore.Authorization;
+@inject UserManager<ApplicationUser> usermanager;
+@attribute [Authorize]
+@inject NavigationManager navigation
+@using MudBlazor
+@if (countries == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+       <MudCard Elevation="28">
+        <MudCardHeader>
+            <MudCardContent>
+                <div class="d-flex justify-content-end">
+                    <MudButton Href="/addcountry" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
+                        Add New Country
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCardHeader>
+        <MudTable Elevation="25" Items="countries" Filter="new Func<Country, bool>(Search)" @bind-customer="country">
+
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Countries List</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="searchString" Placeholder="Search for Countries..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Country Code</MudTh>
+                <MudTh>Country Name</MudTh>
+                <MudTh>Created By</MudTh>
+                <MudTh>Created On</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Id">@context.Code</MudTd>
+                <MudTd DataLabel="Student Name">@context.Name</MudTd>
+                <MudTd DataLabel="Age">@context.CreatedBy.FullName</MudTd>
+                <MudTd DataLabel="Address">@context.CreatedOn</MudTd>
+                <MudTd DataLabel="">
+                    <MudFab @onclick="@(()=>Edit(@context.Id))" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Size="Size.Small" IconSize="Size.Small">Edit </MudFab>
+                    <MudFab @onclick="@(()=>Delete(@context.Id))" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Delete" Size="Size.Small" IconSize="Size.Small">Delete</MudFab>
+
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 5,10,20,50}" />
+            </PagerContent>
+        </MudTable>
+    </MudCard>
+}
+@code {
+
+    private Country country = new();
+    public List<Country> countries { get; set; } = new();
+
+    public string UserId { get; set; }
+
+    private string searchString = "";
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var user = (await authenticationStateTask).User;
+        if (user.Identity.IsAuthenticated)
+        {
+            var currentuser = await usermanager.GetUserAsync(user);
+            UserId = currentuser.Id;
+        }
+        countries = await GetAllCountries();
+
+    }
+    private async Task<List<Country>> GetAllCountries()
+    {
+        countries = await CountryService.GetCountriesAsync();
+        return countries;
+    }
+
+    private bool Search(Country country)
+    {
+        if (country.Name is not null && country.Code is not null &&
+            country.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase)
+            || country.Code.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private void Edit(int id)
+    {
+        country = countries.FirstOrDefault(c => c.Id == id);
+    }
+    private void Delete(int id)
+    {
+
+    }
+}
+
+

@@ -1,0 +1,91 @@
+﻿@page "/addsystemcode"
+@using HospitalManagementSystem.Data
+@using HospitalManagementSystem.Models
+@using Microsoft.AspNetCore.Identity;
+@using Microsoft.AspNetCore.Authorization;
+@inject ISnackbar snackBar
+@inject UserManager<ApplicationUser> usermanager;
+@attribute [Authorize]
+@inject NavigationManager navigation
+
+<div class="mx-2">
+  <MudPaper Elevation="15" Class="p-4" >
+    <div class="row">
+        <EditForm Model="systemCode" OnValidSubmit="CreateNewSystemCode" FormName="addsystemcode">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="col-md-12">
+                <h3>Add New System Code</h3>
+            </div>
+            <div class="col-md-12">
+                <div class="row">
+                    <div class="form-group col-md-6">
+                        <label for="systemCodeCode">Code</label>
+                        <InputText for="Code" class="form-control" @bind-Value="@systemCode.Code" />
+                        <ValidationMessage For="@(() => systemCode.Code)" />
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="systemCodeName">Name</label>
+                        <InputText for="Description" class="form-control" @bind-Value="@systemCode.Description" />
+                        <ValidationMessage For="@(() => systemCode.Description)" />
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="systemCodeOrderNo">Order No</label>
+                        <InputNumber for="OrderNo" class="form-control" @bind-Value="@systemCode.OrderNo" />
+                        <ValidationMessage For="@(() => systemCode.OrderNo)" />
+                    </div>
+                </div>
+                <div class="form-group mt-4">
+                  <MudItem xs="12" Class="mt-4">
+                      <MudStack Row Justify="Justify.SpaceBetween">
+                        <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Filled.ArrowCircleLeft" OnClick="BacktoList">
+                            Back to List
+                        </MudButton>
+
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save">
+                            Save System Code
+                        </MudButton>
+                      </MudStack>
+                  </MudItem>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</MudPaper>
+</div>
+
+@code {
+
+    [SupplyParameterFromForm]
+    public SystemCode systemCode { get; set; } = new();
+
+    public string UserId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await authenticationStateTask).User;
+        if (user.Identity.IsAuthenticated)
+        {
+            var currentuser = await usermanager.GetUserAsync(user);
+            UserId = currentuser.Id;
+        }
+    }
+
+
+    protected async Task CreateNewSystemCode()
+    {
+        systemCode.CreatedOn = DateTime.UtcNow;
+        systemCode.CreatedById = UserId;
+        var result = await SystemCodeService.AddSystemCodeAsync(systemCode);
+        snackBar.Add("System Code created successfully", Severity.Success);
+        navigation.NavigateTo("/systemcodes");
+    }
+
+    public void BacktoList()
+    {
+        navigation.NavigateTo("/systemcodes");
+    }
+}

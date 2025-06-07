@@ -1,0 +1,138 @@
+﻿@page "/departments"
+@attribute [StreamRendering]
+@using HospitalManagementSystem.Data
+@using HospitalManagementSystem.Models
+@using Microsoft.AspNetCore.Identity;
+@using Microsoft.AspNetCore.Authorization;
+@inject UserManager<ApplicationUser> usermanager;
+@attribute [Authorize]
+@inject NavigationManager navigation
+@using MudBlazor
+@if (departments == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <MudCard Elevation="28">
+        <MudCardHeader>
+            <MudCardContent>
+                <div class="d-flex justify-content-end">
+                    <MudButton Href="/adddepartment" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
+                        Add New Department
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCardHeader>
+        <MudTable Elevation="25" SortLabel="Sort By" Dense="@dense" Hover="true" Filter="new Func<Department,bool>(FilterFunc)" Breakpoint="Breakpoint.Sm" Striped="true" LoadingProgressColor="Color.Info" Items="departments"  @bind-customer="department">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Departments List</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="searchstring"
+                              Placeholder="Search for Departments"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Medium"
+                              Class="mt-0">
+                </MudTextField>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<Department, object>(x=>x.Code)">Department Code</MudTableSortLabel></MudTh>
+                <MudTh>Department Name</MudTh>
+                <MudTh>Created By</MudTh>
+                <MudTh>Created On</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd  DataLabel="Code">@context.Code</MudTd>
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="CreatedBy">@context.CreatedBy.FullName</MudTd>
+                <MudTd DataLabel="CreatedOn">@context.CreatedOn</MudTd>
+                <MudTd DataLabel="">
+                    <MudFab OnClick="@(()=>Edit(@context.Id))" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Size="Size.Small" IconSize="Size.Small">Edit</MudFab>
+                    <MudFab OnClick="@(()=>Delete(@context.Id))" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Delete" Size="Size.Small" IconSize="Size.Small">Delete</MudFab>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>There are no departments</MudText>
+            </NoRecordsContent>
+            <LoadingContent>
+                <MudText>Loading Departments...</MudText>
+            </LoadingContent>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] {5,10,20,50,100}" RowsPerPageString="Departments Per Page" HorizontalAlignment="HorizontalAlignment.Center" />
+            </PagerContent>
+        </MudTable>
+    </MudCard>
+}
+@code {
+    private string searchstring = "";
+
+    private bool dense = false;
+
+    private bool hover = true;
+
+    private bool ronly = false;
+
+    public Department department = new();
+
+    public List<Department> departments { get; set; } = new();
+
+    public string UserId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await authenticationStateTask).User;
+        if (user.Identity.IsAuthenticated)
+        {
+            var currentuser = await usermanager.GetUserAsync(user);
+            UserId = currentuser.Id;
+        }
+
+        departments = await GetAllDepartments();
+    }
+
+    private async Task<List<Department>> GetAllDepartments()
+    {
+        departments = await DepartmentService.GetDepartmentsAsync();
+
+        return departments;
+    }
+
+
+    private async void Edit(int id)
+    {
+        department = await DepartmentService.GetDepartmentByIdAsync(id);
+    }
+
+    private async void Delete(int id)
+    {
+        department = await DepartmentService.DeleteDepartmentAsync(id);
+    }
+
+    private bool Search(Department department)
+    {
+        if (string.IsNullOrWhiteSpace(searchstring))
+            return true;
+
+        return department.Name.Contains(searchstring, StringComparison.OrdinalIgnoreCase)
+            || department.Code.Contains(searchstring, StringComparison.OrdinalIgnoreCase)
+            || department.CreatedBy.FullName.Contains(searchstring, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool FilterFunc(Department department)
+    {
+        if (string.IsNullOrWhiteSpace(searchstring))
+            return true;
+        if (department.Code.Contains(searchstring, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (department.Name.Contains(searchstring, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+}
+
+

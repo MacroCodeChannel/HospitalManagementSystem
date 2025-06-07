@@ -1,0 +1,145 @@
+﻿@page "/systemcodes"
+@attribute [StreamRendering]
+@using HospitalManagementSystem.Data
+@using HospitalManagementSystem.Models
+@using Microsoft.AspNetCore.Identity;
+@using Microsoft.AspNetCore.Authorization;
+@inject UserManager<ApplicationUser> usermanager;
+@attribute [Authorize]
+@inject NavigationManager navigation
+@using MudBlazor
+@if (SystemCodesList == null)
+{
+  <MudProgressCircular Color="Color.Primary" class="spinner-border" Indeterminate="true"/>
+}
+else
+{
+    <PageTitle>System Codes List</PageTitle>
+    <MudCard Elevation="28">
+        <MudCardHeader>
+            <MudCardContent>
+                <div class="d-flex justify-content-end">
+                    <MudButton Href="/addsystemcode" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">
+                        Add System Code
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCardHeader>
+        <MudTable Elevation="25" SortLabel="Sort By" Dense="@dense" Hover="true" Filter="new Func<SystemCode,bool>(FilterFunc)"
+                  Breakpoint="Breakpoint.Sm"
+                  Striped="true"
+                  LoadingProgressColor="Color.Info"
+                  Items="SystemCodesList" @bind-customer="systemCode">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">System Code List</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="searchstring"
+                              Placeholder="Search for System Codes"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Medium"
+                              Class="mt-0">
+                </MudTextField>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<SystemCode, object>(x=>x.Code)">System Code</MudTableSortLabel></MudTh>
+                <MudTh>Code Description</MudTh>
+                <MudTh>Created By</MudTh>
+                <MudTh>Created On</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Code">@context.Code</MudTd>
+                <MudTd DataLabel="Name">@context.Description</MudTd>
+                <MudTd DataLabel="CreatedBy">@context.CreatedBy.FullName</MudTd>
+                <MudTd DataLabel="CreatedOn">@context.CreatedOn</MudTd>
+                <MudTd DataLabel="">
+                    <MudFab OnClick="@(()=>Edit(@context.Id))" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Size="Size.Small" IconSize="Size.Small">Edit</MudFab>
+                    <MudFab OnClick="@(()=>Delete(@context.Id))" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Delete" Size="Size.Small" IconSize="Size.Small">Delete</MudFab>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>There are no System Codes List</MudText>
+            </NoRecordsContent>
+            <LoadingContent>
+                <MudText>Loading System Codes...</MudText>
+            </LoadingContent>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] {5,10,20,50,100}" RowsPerPageString="Departments Per Page" HorizontalAlignment="HorizontalAlignment.Center" />
+            </PagerContent>
+        </MudTable>
+
+    </MudCard>
+}
+@code {
+
+    public List<SystemCode> SystemCodesList { get; set; } = new();
+
+    public string UserId { get; set; }
+
+    public SystemCode systemCode { get; set; } = new();
+
+    private string searchstring = "";
+
+    private bool dense = false;
+
+    private bool hover = true;
+
+    private bool ronly = false;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var user = (await authenticationStateTask).User;
+        if (user.Identity.IsAuthenticated)
+        {
+            var currentuser = await usermanager.GetUserAsync(user);
+            UserId = currentuser.Id;
+        }
+
+        SystemCodesList = await GetAllSystemCodes();
+    }
+
+    private async Task<List<SystemCode>> GetAllSystemCodes()
+    {
+        SystemCodesList = await SystemCodeService.GetSystemCodesAsync();
+
+        return SystemCodesList;
+    }
+
+
+    private async void Edit(int id)
+    {
+        systemCode = await SystemCodeService.GetSystemCodeByIdAsync(id);
+    }
+
+    private async void Delete(int id)
+    {
+        systemCode = await SystemCodeService.DeleteSystemCodeAsync(id);
+    }
+
+    private bool Search(Department department)
+    {
+        if (string.IsNullOrWhiteSpace(searchstring))
+            return true;
+
+        return department.Name.Contains(searchstring, StringComparison.OrdinalIgnoreCase)
+            || department.Code.Contains(searchstring, StringComparison.OrdinalIgnoreCase)
+            || department.CreatedBy.FullName.Contains(searchstring, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool FilterFunc(SystemCode systemcode)
+    {
+        if (string.IsNullOrWhiteSpace(searchstring))
+            return true;
+        if (systemcode.Code.Contains(searchstring, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (systemcode.Description.Contains(searchstring, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+}
+
